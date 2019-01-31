@@ -30,6 +30,7 @@
                 vertical-align: middle;
             }
             .window__block {
+                min-width: 300px;
                 display: inline-block;
                 border: 1px solid #e7e5e3;
                 background: rgb(245, 242, 240);
@@ -42,6 +43,9 @@
             .window__field-block input {
                 padding: 5px;
             }
+            .window__field-block select {
+                padding: 5px;
+            }
             .window__list-row-block {
                 position: relative;
                 height: 30px;
@@ -50,6 +54,7 @@
             }
             .window__list-row-block input {
                 position: absolute;
+                padding: 5px;
                 top: 10px;
                 left: 10px;
                 height: 30px;
@@ -306,13 +311,17 @@
                 border: 1px solid #ddd;
                 background: #eee;
             }
-            #synchronization-options-cancel-button {
+            #synchronization-options-close-button {
                 display: inline-block;
-                width: calc(50% - 3px);
+                width: calc(33% - 3px);
             }
             #synchronization-options-update-button {
                 display: inline-block;
-                width: calc(50% - 3px);
+                width: calc(33% - 3px);
+            }
+            #synchronization-options-add-button {
+                display: inline-block;
+                width: calc(33% - 3px);
             }
         </style>
     </head>
@@ -649,7 +658,6 @@
                     }
                                         
                     for (var iColumnIndex in aSavedConnections[iRowIndex]) {
-                        console.log(aSavedConnections[iRowIndex][iColumnIndex]);
                         if (!bColumns) {
                             sColumns += '"'+iColumnIndex.toString().replace(/"/, '\\"')+'",';
                         }
@@ -667,18 +675,18 @@
                 fnDownloadFile("sqlconnections-export.csv", sExportString);
             }
             
-            fnUpdateSynchronizationURLList()
+            function fnUpdateSynchronizationURLList()
             {
                 var oListItems = $$("#synchronization-options-window-list-block .window__list-row-block input");
                 
-                for (var iIndex in oListItems) {
-                    oSettings['aSyncURLs'][iIndex] = oListItems[iIndex].value;
-                }
+                oListItems.forEach(function(oElement, iIndex) {
+                    oSettings['aSyncURLs'][iIndex] = oElement.value;
+                });
                 
                 localStorage['sSettings'] = JSON.stringify(oSettings);
             }
             
-            fnUpdateSynchronizationURLListInWindow()
+            function fnUpdateSynchronizationURLListInWindow()
             {
                 if (localStorage['sSettings']) {
                     try {
@@ -702,55 +710,56 @@
                 }            
             }
             
-            fnAddSynchronizationURL()
+            function fnAddSynchronizationURL()
             {
-                oSettings['aSyncURLs'].push();
+                oSettings['aSyncURLs'].push('');
                 localStorage['sSettings'] = JSON.stringify(oSettings);
             }
 
-            fnAddSynchronizationURLInWindow()
+            function fnAddSynchronizationURLInWindow()
             {
                 fnAddSynchronizationURL();
                 fnUpdateSynchronizationURLListInWindow();
             }
             
-            fnRemoveSynchronizationURL(iURLId)
+            function fnRemoveSynchronizationURL(iURLId)
             {
-                //oSettings['aSyncURLs'][iConnectionIndex] = { bIsDeleted: true };
-                oSettings['aSyncURLs'].splice(iConnectionIndex, 1);
+                //oSettings['aSyncURLs'][iURLId] = { bIsDeleted: true };
+                oSettings['aSyncURLs'].splice(iURLId, 1);
                 localStorage['sSettings'] = JSON.stringify(oSettings);
             }
             
-            fnRemoveSynchronizationURLInWindow(iURLId)
+            function fnRemoveSynchronizationURLInWindow(iURLId)
             {
-                //$("#synchronization-options-url-"+iURLId).remove();
+                $("#synchronization-options-url-"+iURLId).remove();
                 fnRemoveSynchronizationURL(iURLId);
                 fnUpdateSynchronizationURLListInWindow();
             }
             
-            function fnSynchronize(sURL)
+            function fnSynchronize()
             {
-                var oIframe;
-                if (oIframe = $("#synchronize-iframe"))
-                    oIframe.remove();
-                oIframe = document.createElement("iframe");
-                oIframe.id = "synchronize-iframe"
-                oIframe.onload = function () { 
-                    console.log('loaded');
-                    var aData = {
-                        aSavedConnections: aSavedConnections,
-                        oSettings: oSettings
+                for (var iIndex in oSettings['aSyncURLs']) {
+                    var oIframe;
+                    if (oIframe = $("#synchronize-iframe"))
+                        oIframe.remove();
+                    oIframe = document.createElement("iframe");
+                    oIframe.id = "synchronize-iframe"
+                    oIframe.onload = function () { 
+                        console.log('loaded');
+                        var aData = {
+                            aSavedConnections: aSavedConnections,
+                            oSettings: oSettings
+                        };
+                        (oIframe.contentWindow || oIframe.contentDocument)
+                                .postMessage(
+                                    JSON.stringify(aData), 
+                                    '*'
+                                );
                     };
-                    (oIframe.contentWindow || oIframe.contentDocument)
-                            .postMessage(
-                                JSON.stringify(aData), 
-                                window.location.href
-                            );
-                    oIframe.remove();
-                };
-                oIframe.src = sURL;
-                oIframe.style.display = "none";
-                document.body.appendChild(oIframe);
+                    oIframe.src = oSettings['aSyncURLs'][iIndex];
+                    oIframe.style.display = "none";
+                    document.body.appendChild(oIframe);
+                }
             }
             
             document.onclick = function(oEvent)
@@ -822,21 +831,32 @@
                 
                 if (oEvent.target.id == "connection-manager-synchronization-options") {
                     oSynchronizationOptionsWindow.classList.add('show');
-                    //fnSynchronize(window.location.href);
+                    return;
                 }
-                
-                if (oEvent.target.id == "synchronization-options-cancel-button") {
+
+                if (oEvent.target.id == "connection-manager-synchronize") {
+                    fnSynchronize();
+                    return;
+                }
+
+                if (oEvent.target.id == "synchronization-options-close-button") {
                     oSynchronizationOptionsWindow.classList.remove('show');
                     return;
                 }
                 
                 if (oEvent.target.id == "synchronization-options-update-button") {
                     oSynchronizationOptionsWindow.classList.remove('show');
+                    fnUpdateSynchronizationURLList();
                     return;
                 }
                 
-                if (oEvent.target.classList.contains('window__list-row-block__delete-button') {
-                    fnRemoveSynchronizationURLInWindow(oConnectionLink.getAttribute('url-id'));
+                if (oEvent.target.id == "synchronization-options-add-button") {
+                    fnAddSynchronizationURLInWindow();
+                    return;
+                }
+                
+                if (oEvent.target.classList.contains('window__list-row-block__delete-button')) {
+                    fnRemoveSynchronizationURLInWindow(oEvent.target.getAttribute('url-id'));
                     return;
                 }
             };
@@ -862,7 +882,7 @@
             window.onmessage = function(oEvent)
             {
                 var oData = JSON.parse(oEvent.data);
-
+                
                 localStorage['sSavedConnections'] = JSON.stringify(oData['aSavedConnections']);
                 localStorage['sSettings'] = JSON.stringify(oData['oSettings']);
             }
@@ -896,7 +916,8 @@
                         <span>Connections</span>
                         <div class="connection-manager__button" id="connection-manager-export-as-json">&#128190; Export as JSON</div>
                         <div class="connection-manager__button" id="connection-manager-export-as-csv">&#128190; Export as CSV</div>
-                        <div class="connection-manager__button" id="connection-manager-synchronization-options">&#x21C4; Synchronization options</div>
+                        <div class="connection-manager__button" id="connection-manager-synchronization-options">Synchronization options ...</div>
+                        <div class="connection-manager__button" id="connection-manager-synchronize">&#x21C4; Synchronize</div>
                     </div>
                     
                 </div>
@@ -904,10 +925,14 @@
                 <div class="window-background__table" id="synchronization-options-window">
                     <div class="window-background__cell">
                         <div class="window__block">
+                            <div class="window__field-block">
+                                <label>Synchronization options</label>
+                            </div>
                             <div id="synchronization-options-window-list-block">
                             </div>
                             <div class="window__field-block">
-                                <input type="submit" id="synchronization-options-cancel-button" value="Cancel">
+                                <input type="submit" id="synchronization-options-close-button" value="Close">
+                                <input type="submit" id="synchronization-options-add-button" value="Add">
                                 <input type="submit" id="synchronization-options-update-button" value="Update">
                             </div>
                         </div>
