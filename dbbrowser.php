@@ -216,6 +216,7 @@
                 border: 1px solid #ddd;
                 background: #eee;
                 cursor: pointer;
+                float: left;
             }
             .connection-manager__link:hover {
                 border: 1px solid #d0d0d0;
@@ -381,6 +382,7 @@
             
             window.onload = function()
             {
+                console.trace(arguments);
                 oHomeTab = $("#connections-tab__home-tab");
                 oSQLConnectionWindow = $("#sqlconnection-window"); 
                 oSynchronizationOptionsWindow = $("#synchronization-options-window");
@@ -388,11 +390,12 @@
                 fnCreateSQLConnectionButtons();
                 fnUpdateSynchronizationURLListInWindow();
                 
-                fnCreateEditorForElement(document.getElementById("connection-1-request-1"));
+                //fnCreateEditorForElement(document.getElementById("connection-1-request-1"));
             }
             
             function fnCreateEditorForElement(oElement)
             {
+                console.trace(arguments);
                 ace.edit(oElement, {
                     mode: "ace/mode/sql",
                     selectionStyle: "text"
@@ -401,6 +404,7 @@
             
             function fnAddSQLConnection(sType, sMethod, sDriver, sName, sUser, sHost, sSocket, sPassword)
             {
+                console.trace(arguments);
                 for (var iIndex in aSavedConnections) {
                     if (aSavedConnections[iIndex]['sType'] == sType
                         && aSavedConnections[iIndex]['sMethod'] == sMethod
@@ -433,6 +437,7 @@
             
             function fnUpdateSQLConnection(iIndex, sType, sMethod, sDriver, sName, sUser, sHost, sSocket, sPassword)
             {
+                console.trace(arguments);
                 aSavedConnections[iIndex]['sType'] = sType;
                 aSavedConnections[iIndex]['sMethod'] = sMethod;
                 aSavedConnections[iIndex]['sDriver'] = sDriver;
@@ -447,6 +452,7 @@
             
             function fnRemoveSQLConnection(iConnectionIndex)
             {
+                console.trace(arguments);
                 aSavedConnections[iConnectionIndex] = { bIsDeleted: true };
                 fnRemoveSQLConnectionButton(iConnectionIndex);            
                 localStorage['sSavedConnections'] = JSON.stringify(aSavedConnections);
@@ -454,6 +460,7 @@
             
             function fnSelectMethod(sMethod)
             {
+                console.trace(arguments);
                 if (sMethod == "tcp-ip") {
                     oSQLConnectionWindow.classList.add('tcp-ip');
                     oSQLConnectionWindow.classList.remove('socket-pipe');
@@ -466,6 +473,7 @@
 
             function fnSelectType(sType)
             {
+                console.trace(arguments);
                 if (sType == "php-pdo") {
                     oSQLConnectionWindow.classList.remove('php-pdo-proxy');                    
                 }
@@ -476,6 +484,7 @@
 
             function fnOnAddSQLConnectionWindow()
             {
+                console.trace(arguments);
                 fnAddSQLConnection(
                     document.getElementById("sqlconnection-type").value,
                     document.getElementById("sqlconnection-method").value,
@@ -490,6 +499,7 @@
             
             function fnOnUpdateSQLConnectionWindow()
             {
+                console.trace(arguments);
                 fnUpdateSQLConnection(
                     iConnectionManagerConnectionIndex,
                     document.getElementById("sqlconnection-type").value,
@@ -505,6 +515,7 @@
             
             function fnShowSQLNewConnectionWindow()
             {
+                console.trace(arguments);
                 iConnectionManagerConnectionIndex = 0;
                 fnSetConnectionsActiveTab(oHomeTab);
                 oSQLConnectionWindow.classList.add('show');
@@ -524,6 +535,7 @@
             
             function fnShowSQLConnectionWindow(iIndex)
             {
+                console.trace(arguments);
                 iConnectionManagerConnectionIndex = iIndex;
                 fnSetConnectionsActiveTab(oHomeTab);
                 oSQLConnectionWindow.classList.add('show');
@@ -543,6 +555,7 @@
             
             function fnCreateSQLConnectionButtons()
             {
+                console.trace(arguments);
                 if (localStorage['sSavedConnections']) {
                     try {
                         aSavedConnections = JSON.parse(localStorage['sSavedConnections']);
@@ -561,11 +574,13 @@
             
             function fnRemoveSQLConnectionButton(iConnectionIndex)
             {
+                console.trace(arguments);
                 document.getElementById("sqlconnection-"+iConnectionIndex).remove();
             }
 
             function fnUpdateSQLConnectionButton(iConnectionIndex)
             {
+                console.trace(arguments);
                 var oElement = document.getElementById("sqlconnection-"+iConnectionIndex);
                 
                 oElement.querySelector(".connection-manager__link-title").innerText = aSavedConnections[iConnectionIndex]['sName'];
@@ -575,6 +590,7 @@
             
             function fnShowSQLConnectionButton(iConnectionIndex)
             {
+                console.trace(arguments);
                 document.querySelector(".connection-manager").innerHTML +=
                     '<div class="connection-manager__link" \
                         id="sqlconnection-'+iConnectionIndex+'"\
@@ -595,6 +611,7 @@
                         
             function fnSetActiveTab(oTarget, sActiveTabSelector, sActiveBodySelector)
             {
+                console.trace(arguments);
                 var oActiveTab = document.querySelector(sActiveTabSelector);
                 if (oActiveTab) {
                     oActiveTab.classList.remove('active');
@@ -612,16 +629,19 @@
             
             function fnSetConnectionsActiveTab(oTarget)
             {
+                console.trace(arguments);
                 fnSetActiveTab(oTarget, '.connections-tab.active', '.connections-tab-body.active');
             }
             
             function fnSetConnectionsActiveTabById(iConnectionId)
             {
+                console.trace(arguments);
                 fnSetConnectionsActiveTab($("[target=connection-"+iConnectionId+"]"));
             }
             
             function fnCloseTab(oTarget, sTabSelector)
             {
+                console.trace(arguments);
                 if (oTarget) {
                     var oFirstTab = document.querySelector(sTabSelector);
                     fnSetActiveTab(oFirstTab);
@@ -635,6 +655,7 @@
             
             function fnParentOrElementWithClass(oTarget, sClassName)
             {
+                console.trace(arguments);
                 if (oTarget.classList.contains(sClassName)) {
                     return oTarget;
                 }
@@ -648,6 +669,7 @@
             
             function fnDownloadFile(sFileName, sFileContent)
             {
+                console.trace(arguments);
                 var oTextFileAsBlob = new Blob([sFileContent], {type:'text/plain'});
                 var oDownloadLink = document.createElement("a");
                 
@@ -671,11 +693,13 @@
             
             function fnExportConnectionsAsJSON()
             {
+                console.trace(arguments);
                 fnDownloadFile("sqlconnections-export.json", JSON.stringify(aSavedConnections));
             }
             
             function fnExportConnectionsAsCSV()
             {
+                console.trace(arguments);
                 var sExportString = "";
                 var bColumns = false;
                 var sColumns = "";
@@ -705,6 +729,7 @@
             
             function fnUpdateSynchronizationURLList()
             {
+                console.trace(arguments);
                 var oListItems = $$("#synchronization-options-window-list-block .window__list-row-block input");
                 
                 oListItems.forEach(function(oElement, iIndex) {
@@ -716,6 +741,7 @@
             
             function fnUpdateSynchronizationURLListInWindow()
             {
+                console.trace(arguments);
                 if (localStorage['sSettings']) {
                     try {
                         oSettings = JSON.parse(localStorage['sSettings']);
@@ -740,18 +766,21 @@
             
             function fnAddSynchronizationURL()
             {
+                console.trace(arguments);
                 oSettings['aSyncURLs'].push('');
                 localStorage['sSettings'] = JSON.stringify(oSettings);
             }
 
             function fnAddSynchronizationURLInWindow()
             {
+                console.trace(arguments);
                 fnAddSynchronizationURL();
                 fnUpdateSynchronizationURLListInWindow();
             }
             
             function fnRemoveSynchronizationURL(iURLId)
             {
+                console.trace(arguments);
                 //oSettings['aSyncURLs'][iURLId] = { bIsDeleted: true };
                 oSettings['aSyncURLs'].splice(iURLId, 1);
                 localStorage['sSettings'] = JSON.stringify(oSettings);
@@ -759,6 +788,7 @@
             
             function fnRemoveSynchronizationURLInWindow(iURLId)
             {
+                console.trace(arguments);
                 $("#synchronization-options-url-"+iURLId).remove();
                 fnRemoveSynchronizationURL(iURLId);
                 fnUpdateSynchronizationURLListInWindow();
@@ -766,6 +796,7 @@
             
             function fnSynchronize()
             {
+                console.trace(arguments);
                 for (var iIndex in oSettings['aSyncURLs']) {
                     var oIframe;
                     if (oIframe = $("#synchronize-iframe"))
@@ -795,18 +826,13 @@
                 sTabText, 
                 sTabId, 
                 sTabClass, 
-                sTabCloseButtonClass, 
+                sTabCloseButtonClass,
+                sTabBodyParentSelector,
+                sTabBodyClass,
                 sTabBeforeSelector
             )
             {
-                console.log(
-                    sTabPanelSelector, 
-                    sTabText, 
-                    sTabId, 
-                    sTabClass, 
-                    sTabCloseButtonClass, 
-                    sTabBeforeSelector
-                );
+                console.trace(arguments);
                 
                 var oTabPanel = $(sTabPanelSelector);
                 var oTabElement = document.createElement('div');
@@ -821,10 +847,21 @@
                 } else {
                     oTabPanel.append(oTabElement);
                 }
+                
+                var oTabBodyParent = $(sTabBodyParentSelector);
+                var oTabBodyElement = document.createElement('div');
+                
+                oTabBodyElement.innerHTML = '';
+                
+                oTabBodyElement.id = sTabId;
+                oTabBodyElement.classList.add(sTabBodyClass);
+                
+                oTabBodyParent.append(oTabBodyElement);
             }
 
             function fnFindConnectionBySavedConnectionId(iSavedConnectionId)
             {
+                console.trace(arguments);
                 for (var iConnectionId in aConnections) {
                     if (aConnections[iConnectionId]['iSavedConnectionId'] == iSavedConnectionId) {
                         return iConnectionId;
@@ -835,33 +872,62 @@
 
             function fnOpenConnection(iSavedConnectionId)
             {
+                console.trace(arguments);
                 //localStorage['sConnections']
                 var iConnectionId;
                 
-                if ((iConnectionId = fnFindConnectionBySavedConnectionId(iSavedConnectionId])) !== false) {
+                if ((iConnectionId = fnFindConnectionBySavedConnectionId(iSavedConnectionId)) !== false) {
                     fnSetConnectionsActiveTabById(iConnectionId);
                     return;
                 }
+                
+                aConnections.push({
+                    iSavedConnectionId: iSavedConnectionId
+                });
+                iConnectionId = aConnections.length-1;
                 
                 fnCreateTab(
                     ".connections-tab-panel",
                     aSavedConnections[iSavedConnectionId]["sUser"] +
                         "@" +
-                        (sMethod == "tcp-ip" ? 
+                        (aSavedConnections[iSavedConnectionId]["sMethod"] == "tcp-ip" ? 
                             aSavedConnections[iSavedConnectionId]["sHost"] : 
                             aSavedConnections[iSavedConnectionId]["sSocket"]),
                     "connection-"+iConnectionId, 
                     "connections-tab",
-                    
+                    "connection-tab-close-button",
+                    ".connections-tab-bodies",
+                    "connections-tab-body",
+                    ".add-connection-button"
                 );
-                aConnections.push({
-                    iSavedConnectionId: iSavedConnectionId
-                });
-                fnSetConnectionsActiveTabById(aConnections.length-1);
+                
+                var oConnectionTabBody = $("#connection-"+iConnectionId);
+                
+                oConnectionTabBody.innerHTML = '\
+                    <div class="connection-schema-block">\
+                        <div class="connection-schema-block__filter">\
+                            <input \
+                                type="text" \
+                                class="connection-schema-block__filter-textfield" \
+                                id="connection-'+iConnectionId+'-schema-filter"\
+                                placeholder="Filter.."\
+                            >\
+                        </div>\
+                        <div class="connection-schema-block__schema-tree">\
+                        </div>\
+                    </div>\
+                    <div class="connection-tab-panel">\
+                    </div>\
+                    <div class="connection-tab-bodies">\
+                    </div>\
+                ';
+                
+                fnSetConnectionsActiveTabById(iConnectionId);
             }
             
             document.onclick = function(oEvent)
             {
+                console.trace(arguments);
                 if (oEvent.target.id == "connection-manager-export-as-csv") {
                     fnExportConnectionsAsCSV();
                     return;
@@ -966,6 +1032,7 @@
             
             document.onchange = function(oEvent)
             {
+                console.trace(arguments);
                 if (oEvent.target.id == 'sqlconnection-type') {
                     fnSelectType(oEvent.target.value);
                     return;
@@ -984,6 +1051,7 @@
             
             window.onmessage = function(oEvent)
             {
+                console.trace(arguments);
                 var oData = JSON.parse(oEvent.data);
                 
                 localStorage['sSavedConnections'] = JSON.stringify(oData['aSavedConnections']);
@@ -1004,7 +1072,7 @@
         
         <div class="connections-tab-panel">
             <div class="connections-tab active" id="connections-tab__home-tab" target="home-tab">&#127968; Home</div>
-            <div class="connections-tab" target="connection-1">
+            <div class="connections-tab" target="connection-9999">
                 Test <a class="connections-tab-close-button">&Cross;</a>
             </div>
             <div class="connections-tab add-connection-button">&#10133;</div>
@@ -1119,7 +1187,7 @@
 
             </div>
             
-            <div class="connections-tab-body" id="connection-1">
+            <div class="connections-tab-body" id="connection-9999">
                 <div class="connection-schema-block">
                     <div class="connection-schema-block__filter">
                         <input 
@@ -1143,18 +1211,18 @@
                 <div class="connection-tab-bodies">
                     <div class="connection-tab-body active" id="connection-1-query-1">
                         <pre id="connection-1-request-1" style="width:100%;height:400px;">
-                            SELECT 
-                                a.id, 
-                                pp.* 
-                            FROM 
-                                    front_dev.application as a 
-                            left join 
-                                    private_person as pp 
-                            on 
-                                    pp.id = a.user_pp_id 
-                            WHERE 
-                                    a.id = 978
-                                    /*a.status='draft'*/
+SELECT 
+    a.id, 
+    pp.* 
+FROM 
+        front_dev.application as a 
+left join 
+        private_person as pp 
+on 
+        pp.id = a.user_pp_id 
+WHERE 
+        a.id = 978
+        /*a.status='draft'*/
                         </pre>
                     </div>
                     <div class="connection-tab-body" id="connection-1-table-create-1">
