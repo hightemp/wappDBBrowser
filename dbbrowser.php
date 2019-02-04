@@ -1,7 +1,53 @@
 <?php
 
+session_start();
 
+if ($_SERVER["REQUEST_METHOD"]=="POST") {
+    $aRequestData = json_decode(file_get_contents("php://input"), true);
 
+    if (!empty($aRequestData["sCommand"])) {
+        $sDSN = $aRequestData['sDriver'] . ":";
+        
+        if (!empty($aRequestData["sHost"])) {
+            list($sHost, $sPort) = explode(":", $aRequestData["sHost"]);
+            $sDSN .= 'host=' . $sHost .
+                ((!empty($sPort)) ? ';port=' . $sPort : '');
+        }
+        if (!empty($aRequestData["sSocket"])) {
+            $sDSN .= 'unix_socket=' . $aRequestData["sSocket"];
+        }
+    
+        $aResult = ["sStatus" => "ok"];
+        
+        try {
+            $oPDO = new PDO($sDSN, $aRequestData["sUser"], $aRequestData["sPassword"]);
+        
+            if (!empty($aRequestData["sDatabase"])) {
+                $oPDO->query("USE " . $aRequestData["sDatabase"]);
+            }
+            
+            $oPDO->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        
+            switch ($aRequestData["sCommand"]) {
+                case "show_databases":
+                    $oStatement = $oPDO->prepare("SHOW DATABASES");
+                    $oStatement->execute();
+                    $aResult["aResult"] = $oStatement->fetchAll();
+                break;
+                case "show_tables":
+                    $oStatement = $oPDO->prepare("SHOW TABLES");
+                    $oStatement->execute();
+                    $aResult["aResult"] = $oStatement->fetchAll();
+                break;
+            }
+        } catch (\Exception $oException) {
+            $aResult["sStatus"] = "error";
+            $aResult["sMessage"] = $oException->getMessage();
+        }
+        
+        die(json_encode($aResult));
+    }
+}
 ?>
 <html>
     <head>
@@ -11700,8 +11746,9 @@
                     }
                 });
             })();
-            </script>
-            <script>
+            
+        </script>
+        <script>
             
             window.$ = document.querySelector.bind(document);
             window.$$ = document.querySelectorAll.bind(document);
@@ -11710,7 +11757,6 @@
             {
                 console.trace(arguments);
                 oHomeTab = $("#connections-tab__home-tab");
-                console.log('oHomeTab', oHomeTab);
                 oSQLConnectionWindow = $("#sqlconnection-window"); 
                 oSynchronizationOptionsWindow = $("#synchronization-options-window");
                 
@@ -11718,6 +11764,42 @@
                 fnUpdateSynchronizationURLListInWindow();
                 
                 //fnCreateEditorForElement(document.getElementById("connection-1-request-1"));
+            }
+            
+            function fnSendSQLConnectionCommand(iSavedConnectionId, sCommand, fnOnReadyStateChange)
+            {
+                fnSendAjaxRequest(
+                    {
+                        sCommand: sCommand,
+                        sDriver: aSavedConnections[iSavedConnectionId]["sDriver"],
+                        sUser: aSavedConnections[iSavedConnectionId]["sUser"],
+                        sPassword: aSavedConnections[iSavedConnectionId]["sPassword"],
+                        sHost: aSavedConnections[iSavedConnectionId]["sHost"],
+                        sSocket: aSavedConnections[iSavedConnectionId]["sSocket"]
+                    },
+                    fnOnReadyStateChange
+                );
+            }
+            
+            function fnSendAjaxRequest(oData, fnOnReadyStateChange)
+            {
+                oHTTPRequest = new XMLHttpRequest();
+                oHTTPRequest.onreadystatechange = function() {
+                    if (oHTTPRequest.readyState === XMLHttpRequest.DONE) {
+                        if (oHTTPRequest.status === 200) {
+                            try {
+                                var oResponse = JSON.parse(oHTTPRequest.responseText);
+                                fnOnReadyStateChange(oResponse, oHTTPRequest);
+                            } catch (oException) {
+                                alert(oException);
+                            }
+                        }
+                    }
+                };
+                oHTTPRequest.open('POST', window.location.href);
+                //oHTTPRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                oHTTPRequest.setRequestHeader("Content-type", "application/json");
+                oHTTPRequest.send(JSON.stringify(oData));
             }
             
             function fnCreateEditorForElement(oElement)
@@ -12190,7 +12272,8 @@
             {
                 console.trace(arguments);
                 for (var iConnectionId in aConnections) {
-                    if (aConnections[iConnectionId]['iSavedConnectionId'] == iSavedConnectionId) {
+                    if (aConnections[iConnectionId]['iSavedConnectionId'] == iSavedConnectionId
+                        && !aConnections[iConnectionId]['bClosed']) {
                         return iConnectionId;
                     }
                 }
@@ -12209,7 +12292,10 @@
                 }
                 
                 aConnections.push({
-                    iSavedConnectionId: iSavedConnectionId
+                    iSavedConnectionId: iSavedConnectionId,
+                    oDatabases: {
+                        
+                    }
                 });
                 iConnectionId = aConnections.length-1;
                 
@@ -12250,6 +12336,52 @@
                 ';
                 
                 fnSetConnectionsActiveTabById(iConnectionId);
+                
+                fnUpdateDatabasesList(iConnectionId);
+            }
+            
+            function fnUpdateDatabasesList(iConnectionId)
+            {
+                var oSchemaTree = $("#connection-"+iConnectionId+" .connection-schema-block__schema-tree");
+                
+                oSchemaTree.innerHTML = '';
+
+                fnSendSQLConnectionCommand(
+                    iConnectionId,
+                    "show_databases",
+                    function(oResponse, oHTTPRequest) 
+                    {
+                        aConnections["oDatabases"] = {};
+                        
+                        for (var iIndex in oResponse) {
+                            var sDatabase = oResponse[iIndex]["Database"];
+                            console.log(sDatabase);
+                            aConnections["oDatabases"][sDatabase] = {oTables:{}};
+                            oSchemaTree.innerHTML += '\
+                                <div class="schema-tree__database">\
+                                    '+sDatabase+'\
+                                </div>\
+                                <div class="schema-tree__tables-list" database="'+sDatabase+'">\
+                                </div>\
+                            ';
+                            fnUpdateTablesList(iConnectionId, sDatabase);
+                        }
+                    }
+                );
+            }
+            
+            function fnUpdateTablesList(iConnectionId, sDatabaseName)
+            {
+                var oTablesList = $("#connection-"+iConnectionId+" .schema-tree__tables-list[database='"+sDatabaseName+"']");
+                
+                fnSendSQLConnectionCommand(
+                    iConnectionId,
+                    "show_tables",
+                    function(oResponse, oHTTPRequest) 
+                    {
+                        console.log(oResponse);
+                    }
+                );
             }
             
             document.onclick = function(oEvent)
@@ -12311,6 +12443,7 @@
                 if (oEvent.target.classList.contains('connections-tab-close-button')
                     && oEvent.target.parentNode.classList.contains('connections-tab')) {
                     fnCloseTab(oEvent.target.parentNode, '.connections-tab');
+                    aConnections[oEvent.target.parentNode.getAttribute('connection-id')]["bClosed"] = true;
                     return;
                 }
                 
