@@ -350,9 +350,6 @@
     </head>
     <body>
         <script>
-            var $ = document.querySelector.bind(document);
-            var $$ = document.querySelectorAll.bind(document);
-
 			(function () {
 				function o(n) {
 					var i = e;
@@ -11703,11 +11700,17 @@
                     }
                 });
             })();
+            </script>
+            <script>
+            
+            window.$ = document.querySelector.bind(document);
+            window.$$ = document.querySelectorAll.bind(document);
             
             window.onload = function()
             {
                 console.trace(arguments);
                 oHomeTab = $("#connections-tab__home-tab");
+                console.log('oHomeTab', oHomeTab);
                 oSQLConnectionWindow = $("#sqlconnection-window"); 
                 oSynchronizationOptionsWindow = $("#synchronization-options-window");
                 
