@@ -242,13 +242,35 @@
                 right: 10px;
                 height: 30px;
             }
-            .connection-manager__link-close-button {
+            .connection-manager__link-delete-button {
                 position: absolute;
                 top: 10px;
                 right: 10px;
                 font-size: 30px;
-                line-height: 10px;
+                line-height: 13px;
                 cursor: pointer;
+                width: 20px;
+                height: 20px;
+                background: #ddd;
+                text-align: center;
+            }
+            .connection-manager__link-delete-button:hover {
+                background: #bbb;
+            }
+            .connection-manager__link-edit-button {
+                position: absolute;
+                top: 40px;
+                right: 10px;
+                font-size: 17px;
+                line-height: 16px;
+                cursor: pointer;
+                width: 20px;
+                height: 20px;
+                background: #ddd;
+                text-align: center;
+            }
+            .connection-manager__link-edit-button:hover {
+                background: #bbb;
             }
             #sqlconnection-cancel-button {
                 display: inline-block;
@@ -557,7 +579,8 @@
                     '<div class="connection-manager__link" \
                         id="sqlconnection-'+iConnectionIndex+'"\
                         connection-id="'+iConnectionIndex+'">\
-                        <div class="connection-manager__link-close-button">&Cross;</div>\
+                        <div class="connection-manager__link-edit-button">&#x270E;</div>\
+                        <div class="connection-manager__link-delete-button">&Cross;</div>\
                         <div class="connection-manager__link-title">\
                             '+aSavedConnections[iConnectionIndex]['sName']+'\
                         </div>\
@@ -590,6 +613,11 @@
             function fnSetConnectionsActiveTab(oTarget)
             {
                 fnSetActiveTab(oTarget, '.connections-tab.active', '.connections-tab-body.active');
+            }
+            
+            function fnSetConnectionsActiveTabById(iConnectionId)
+            {
+                fnSetConnectionsActiveTab($("[target=connection-"+iConnectionId+"]"));
             }
             
             function fnCloseTab(oTarget, sTabSelector)
@@ -762,6 +790,76 @@
                 }
             }
             
+            function fnCreateTab(
+                sTabPanelSelector, 
+                sTabText, 
+                sTabId, 
+                sTabClass, 
+                sTabCloseButtonClass, 
+                sTabBeforeSelector
+            )
+            {
+                console.log(
+                    sTabPanelSelector, 
+                    sTabText, 
+                    sTabId, 
+                    sTabClass, 
+                    sTabCloseButtonClass, 
+                    sTabBeforeSelector
+                );
+                
+                var oTabPanel = $(sTabPanelSelector);
+                var oTabElement = document.createElement('div');
+                
+                oTabElement.innerHTML = sTabText+'<a class="connections-tab-close-button">&Cross;</a>';
+                
+                oTabElement.classList.add(sTabClass);
+                oTabElement.setAttribute('target', sTabId);
+                
+                if (sTabBeforeSelector) {
+                    oTabPanel.insertBefore(oTabElement, $(sTabBeforeSelector));                    
+                } else {
+                    oTabPanel.append(oTabElement);
+                }
+            }
+
+            function fnFindConnectionBySavedConnectionId(iSavedConnectionId)
+            {
+                for (var iConnectionId in aConnections) {
+                    if (aConnections[iConnectionId]['iSavedConnectionId'] == iSavedConnectionId) {
+                        return iConnectionId;
+                    }
+                }
+                return false;
+            }
+
+            function fnOpenConnection(iSavedConnectionId)
+            {
+                //localStorage['sConnections']
+                var iConnectionId;
+                
+                if ((iConnectionId = fnFindConnectionBySavedConnectionId(iSavedConnectionId])) !== false) {
+                    fnSetConnectionsActiveTabById(iConnectionId);
+                    return;
+                }
+                
+                fnCreateTab(
+                    ".connections-tab-panel",
+                    aSavedConnections[iSavedConnectionId]["sUser"] +
+                        "@" +
+                        (sMethod == "tcp-ip" ? 
+                            aSavedConnections[iSavedConnectionId]["sHost"] : 
+                            aSavedConnections[iSavedConnectionId]["sSocket"]),
+                    "connection-"+iConnectionId, 
+                    "connections-tab",
+                    
+                );
+                aConnections.push({
+                    iSavedConnectionId: iSavedConnectionId
+                });
+                fnSetConnectionsActiveTabById(aConnections.length-1);
+            }
+            
             document.onclick = function(oEvent)
             {
                 if (oEvent.target.id == "connection-manager-export-as-csv") {
@@ -796,14 +894,19 @@
                     return;
                 }
                 
-                if (oEvent.target.classList.contains('connection-manager__link-close-button')) {
+                if (oEvent.target.classList.contains('connection-manager__link-delete-button')) {
                     fnRemoveSQLConnection(oEvent.target.parentNode.getAttribute('connection-id'));
+                    return;
+                }
+                
+                if (oEvent.target.classList.contains('connection-manager__link-edit-button')) {
+                    fnShowSQLConnectionWindow(oEvent.target.parentNode.getAttribute('connection-id'));
                     return;
                 }
                 
                 var oConnectionLink = fnParentOrElementWithClass(oEvent.target, 'connection-manager__link');
                 if (oConnectionLink) {
-                    fnShowSQLConnectionWindow(oConnectionLink.getAttribute('connection-id'));
+                    fnOpenConnection(oEvent.target.parentNode.getAttribute('connection-id'));
                     return;
                 }
                 
