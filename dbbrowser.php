@@ -39,6 +39,19 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
                     $oStatement->execute();
                     $aResult["aResult"] = $oStatement->fetchAll();
                 break;
+                case "show_columns":
+                    $oStatement = $oPDO->prepare("
+                        SELECT 
+                            COLUMN_NAME 
+                        FROM 
+                            INFORMATION_SCHEMA.COLUMNS
+                        WHERE 
+                            TABLE_NAME = '{$aRequestData["sTable"]}' 
+                            AND TABLE_SCHEMA='{$aRequestData["sDatabase"]}'
+                    ");
+                    $oStatement->execute();
+                    $aResult["aResult"] = $oStatement->fetchAll();
+                break;
             }
         } catch (\Exception $oException) {
             $aResult["sStatus"] = "error";
@@ -392,10 +405,38 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
                 display: inline-block;
                 width: calc(33% - 3px);
             }
+            .schema-tree__database,
+            .schema-tree__table,
+            .schema-tree__column {
+                white-space: nowrap;
+                cursor: pointer;
+            }
+            .schema-tree__database:hover,
+            .schema-tree__table:hover,
+            .schema-tree__column:hover {
+                background: #eee;
+            }
+            .schema-tree__column::before,
+            .schema-tree__table::before,
+            .schema-tree__database::before {
+                display: inline-block;
+                content: "\25b6";
+            }
+            .schema-tree__column.show::before,
+            .schema-tree__table.show::before,
+            .schema-tree__database.show::before {
+                content: "\25bc";
+            }
+            .schema-tree__table {
+                margin-left: 20px;
+            }
+            .schema-tree__column {
+                margin-left: 40px;
+            }
         </style>
     </head>
     <body>
-        <script>
+        <!--script>
 			(function () {
 				function o(n) {
 					var i = e;
@@ -11747,7 +11788,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
                 });
             })();
             
-        </script>
+        </script-->
         <script>
             
             window.$ = document.querySelector.bind(document);
@@ -11780,22 +11821,51 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
                     fnOnReadyStateChange
                 );
             }
+
+            function fnSendSQLConnectionCommandForDatabase(iSavedConnectionId, sDatabase, sCommand, oAdditionalData, fnOnReadyStateChange)
+            {
+                var oData = {
+                    sCommand: sCommand,
+                    sDatabase: sDatabase,
+                    sDriver: aSavedConnections[iSavedConnectionId]["sDriver"],
+                    sUser: aSavedConnections[iSavedConnectionId]["sUser"],
+                    sPassword: aSavedConnections[iSavedConnectionId]["sPassword"],
+                    sHost: aSavedConnections[iSavedConnectionId]["sHost"],
+                    sSocket: aSavedConnections[iSavedConnectionId]["sSocket"]
+                };
+                
+                for (var sKey in oAdditionalData) {
+                    oData[sKey] = oAdditionalData[sKey];
+                }
+                
+                fnSendAjaxRequest(
+                    oData,
+                    fnOnReadyStateChange
+                );
+            }
             
             function fnSendAjaxRequest(oData, fnOnReadyStateChange)
             {
                 oHTTPRequest = new XMLHttpRequest();
-                oHTTPRequest.onreadystatechange = function() {
-                    if (oHTTPRequest.readyState === XMLHttpRequest.DONE) {
-                        if (oHTTPRequest.status === 200) {
-                            try {
-                                var oResponse = JSON.parse(oHTTPRequest.responseText);
-                                fnOnReadyStateChange(oResponse, oHTTPRequest);
-                            } catch (oException) {
-                                alert(oException);
+                //oHTTPRequest.onreadystatechange = function() {
+                (function(__oHTTPRequest)
+                {
+                    __oHTTPRequest.onload = function() {
+                        console.log(oData, __oHTTPRequest.status, __oHTTPRequest.readyState, __oHTTPRequest.responseText);
+                        if (__oHTTPRequest.readyState === XMLHttpRequest.DONE) {
+                            if (__oHTTPRequest.status === 200) {
+                                try {
+                                    //oHTTPRequest.onreadystatechange = null;
+                                    var oResponse = JSON.parse(__oHTTPRequest.responseText);
+                                    console.log('fnSendAjaxRequest::oResponse', oData, oResponse);
+                                    fnOnReadyStateChange(oResponse, __oHTTPRequest);
+                                } catch (oException) {
+                                    alert(oException);
+                                }
                             }
                         }
-                    }
-                };
+                    };
+                })(oHTTPRequest);
                 oHTTPRequest.open('POST', window.location.href);
                 //oHTTPRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                 oHTTPRequest.setRequestHeader("Content-type", "application/json");
@@ -12293,9 +12363,8 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
                 
                 aConnections.push({
                     iSavedConnectionId: iSavedConnectionId,
-                    oDatabases: {
-                        
-                    }
+                    oDatabases: {},
+                    sSelectedDatabase: ""
                 });
                 iConnectionId = aConnections.length-1;
                 
@@ -12342,6 +12411,8 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
             
             function fnUpdateDatabasesList(iConnectionId)
             {
+                console.trace(arguments);
+                
                 var oSchemaTree = $("#connection-"+iConnectionId+" .connection-schema-block__schema-tree");
                 
                 oSchemaTree.innerHTML = '';
@@ -12351,12 +12422,13 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
                     "show_databases",
                     function(oResponse, oHTTPRequest) 
                     {
+                        console.trace(arguments);
+                        
                         aConnections["oDatabases"] = {};
                         
-                        for (var iIndex in oResponse) {
-                            var sDatabase = oResponse[iIndex]["Database"];
-                            console.log(sDatabase);
-                            aConnections["oDatabases"][sDatabase] = {oTables:{}};
+                        for (var iIndex in oResponse["aResult"]) {
+                            var sDatabase = oResponse["aResult"][iIndex]["Database"];
+                            
                             oSchemaTree.innerHTML += '\
                                 <div class="schema-tree__database">\
                                     '+sDatabase+'\
@@ -12364,22 +12436,88 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
                                 <div class="schema-tree__tables-list" database="'+sDatabase+'">\
                                 </div>\
                             ';
+                            
                             fnUpdateTablesList(iConnectionId, sDatabase);
                         }
                     }
                 );
             }
             
-            function fnUpdateTablesList(iConnectionId, sDatabaseName)
+            function fnUpdateTablesList(iConnectionId, sDatabase)
             {
-                var oTablesList = $("#connection-"+iConnectionId+" .schema-tree__tables-list[database='"+sDatabaseName+"']");
+                console.trace(arguments);
                 
-                fnSendSQLConnectionCommand(
+                var oTablesList = $("#connection-"+iConnectionId+" .schema-tree__tables-list[database='"+sDatabase+"']");
+                
+                oTablesList.innerHTML = '';
+                
+                fnSendSQLConnectionCommandForDatabase(
                     iConnectionId,
+                    sDatabase,
                     "show_tables",
+                    {},
                     function(oResponse, oHTTPRequest) 
                     {
-                        console.log(oResponse);
+                        console.trace(arguments);
+                        
+                        var oTablesList = $("#connection-"+iConnectionId+" .schema-tree__tables-list[database='"+sDatabase+"']");
+                        
+                        aConnections["oDatabases"][sDatabase] = {oTables:{}};
+                        
+                        for (var iIndex in oResponse["aResult"]) {
+                            var sTable = oResponse["aResult"][iIndex]["Tables_in_"+sDatabase];
+                            
+                            oTablesList.innerHTML += '\
+                                <div class="schema-tree__table">\
+                                    '+sTable+'\
+                                </div>\
+                                <div class="schema-tree__columns-list" database="'+sDatabase+'" table="'+sTable+'">\
+                                </div>\
+                            ';
+                            
+                            fnUpdateColumnsList(iConnectionId, sDatabase, sTable);
+                        }
+                    }
+                );
+            }
+            
+            function fnUpdateColumnsList(iConnectionId, sDatabase, sTable)
+            {
+                console.trace(arguments);
+                
+                var oColumnsList = $("#connection-"+iConnectionId+" .schema-tree__tables-list[database='"+sDatabase+"'][table='"+sTable+"']");
+                console.log("#connection-"+iConnectionId+" .schema-tree__tables-list[database='"+sDatabase+"'][table='"+sTable+"']", oColumnsList);
+                
+                if (!oColumnsList) {
+                    return;
+                }
+                
+                oColumnsList.innerHTML = '';
+                
+                fnSendSQLConnectionCommandForDatabase(
+                    iConnectionId,
+                    sDatabase,
+                    "show_columns",
+                    {
+                        sTable: sTable
+                    },
+                    function(oResponse, oHTTPRequest) 
+                    {
+                        console.trace(arguments);
+                        
+                        var oColumnsList = $("#connection-"+iConnectionId+" .schema-tree__tables-list[database='"+sDatabase+"'][table='"+sTable+"']");
+                        
+                        aConnections["oDatabases"][sDatabase]["oTables"][sTable] = {oColumns:{}};
+                        
+                        for (var iIndex in oResponse["aResult"]) {
+                            var sColumn = oResponse["aResult"][iIndex]["COLUMN_NAME"];
+                            
+                            oColumnsList.innerHTML += '\
+                                <div class="schema-tree__column">\
+                                    '+sColumn+'\
+                                </div>\
+                            ';
+                        }
                     }
                 );
             }
@@ -12387,6 +12525,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST") {
             document.onclick = function(oEvent)
             {
                 console.trace(arguments);
+                
                 if (oEvent.target.id == "connection-manager-export-as-csv") {
                     fnExportConnectionsAsCSV();
                     return;
